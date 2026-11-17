@@ -138,30 +138,6 @@ featured_data = create_features(df)
 
 try:
     results, threshold = detect_anomalies(featured_data)
-    st.write("### Isolation Forest Verification")
-
-    st.write("Threshold:", threshold)
-    st.write("Maximum score:", results["anomaly_score"].max())
-    st.write("Minimum score:", results["anomaly_score"].min())
-    
-    st.write(
-        "Flagged observations:",
-        int(results["prediction"].sum())
-    )
-    
-    st.write(
-        "Injected anomalies detected:",
-        int(
-            (
-                (results["injected_anomaly"] == 1)
-                & (results["prediction"] == 1)
-            ).sum()
-        )
-    )
-    
-    st.write("First 5 feature values:")
-    
-    st.dataframe(results[features].head())
 except Exception as e:
     st.error(f"Prediction failed: {e}")
     st.stop()
