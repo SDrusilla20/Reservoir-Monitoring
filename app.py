@@ -58,20 +58,30 @@ except Exception as e:
 # ---------------- FEATURE ENGINEERING ----------------
 
 def create_features(data):
+
     data = data.copy()
+
     data["date"] = pd.to_datetime(data["date"])
     data = data.sort_values("date").reset_index(drop=True)
 
+    # Check whether all trained features are already present
+    if all(col in data.columns for col in features):
+        return data.dropna(subset=features).reset_index(drop=True)
+
+    # Generate daily changes
     for col in PRIMARY:
         data[f"{col}_change"] = data[col].diff()
 
+    # Calculate net flow
     data["net_flow"] = (
         data["inflow_cusecs"] - data["outflow_cusecs"]
     )
 
+    # Calculate rolling statistics using previous observations
     data = data.set_index("date")
 
     for col in PRIMARY:
+
         previous = data[col].shift(1)
 
         data[f"{col}_rolling_mean_14d"] = (
@@ -82,7 +92,12 @@ def create_features(data):
             previous.rolling("14D", min_periods=5).std()
         )
 
-    return data.reset_index()
+    data = data.reset_index()
+
+    # Retain only observations with complete model features
+    data = data.dropna(subset=features).reset_index(drop=True)
+
+    return data
 
 
 # ---------------- MODEL PREDICTION ----------------
@@ -123,110 +138,6 @@ featured_data = create_features(df)
 
 try:
     results, threshold = detect_anomalies(featured_data)
-    st.write("### Anomaly Detection Diagnostics")
-
-    st.write("Replay dataset rows:", len(df))
-    st.write("Valid rows after feature engineering:", len(results))
-    st.write("Detection threshold:", threshold)
-
-    st.write(
-        "Maximum anomaly score:",
-        results["anomaly_score"].max()
-    )
-
-    st.write(
-        "Minimum anomaly score:",
-        results["anomaly_score"].min()
-    )
-
-    st.write(
-        "Predictions:",
-        results["prediction"].value_counts().to_dict()
-    )
-    
-    if "injected_anomaly" in results.columns:
-        st.write(
-            "Injected anomalies remaining:",
-            int(results["injected_anomaly"].sum())
-        )
-    
-        st.write(
-            "Injected anomalies detected:",
-            int(
-                (
-                    (results["injected_anomaly"] == 1)
-                    & (results["prediction"] == 1)
-                ).sum()
-            )
-        )
-    
-        st.write(
-            "Injected anomalies missed:",
-            int(
-                (
-                    (results["injected_anomaly"] == 1)
-                    & (results["prediction"] == 0)
-                ).sum()
-            )
-        )
-        st.write("### Score Comparison")
-
-    if "injected_anomaly" in results.columns:
-    
-        st.write(
-            "Average score of injected anomalies:",
-            results.loc[
-                results["injected_anomaly"] == 1,
-                "anomaly_score"
-            ].mean()
-        )
-    
-        st.write(
-            "Average score of normal observations:",
-            results.loc[
-                results["injected_anomaly"] == 0,
-                "anomaly_score"
-            ].mean()
-        )
-    
-        st.write("Top 10 anomaly scores:")
-    
-        st.dataframe(
-            results.nlargest(10, "anomaly_score")[
-                ["date", "inflow_cusecs",
-                 "anomaly_score", "injected_anomaly",
-                 "prediction"]
-            ]
-        )
-    st.write("### Injected vs Normal Score Distribution")
-
-    st.write("Injected anomaly score statistics:")
-    
-    st.write(
-        results.loc[
-            results["injected_anomaly"] == 1,
-            "anomaly_score"
-        ].describe()
-    )
-    
-    st.write("Normal score statistics:")
-    
-    st.write(
-        results.loc[
-            results["injected_anomaly"] == 0,
-            "anomaly_score"
-        ].describe()
-    )
-    
-    st.write("### Highest-scoring injected anomalies")
-    
-    st.dataframe(
-        results[results["injected_anomaly"] == 1]
-        .sort_values("anomaly_score", ascending=False)
-        [["date", "inflow_cusecs",
-          "anomaly_score", "prediction"]]
-        .head(10)
-    )
 except Exception as e:
     st.error(f"Prediction failed: {e}")
     st.stop()
