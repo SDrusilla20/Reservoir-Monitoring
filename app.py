@@ -125,50 +125,50 @@ try:
     results, threshold = detect_anomalies(featured_data)
     st.write("### Anomaly Detection Diagnostics")
 
-st.write("Replay dataset rows:", len(df))
-st.write("Valid rows after feature engineering:", len(results))
-st.write("Detection threshold:", threshold)
+    st.write("Replay dataset rows:", len(df))
+    st.write("Valid rows after feature engineering:", len(results))
+    st.write("Detection threshold:", threshold)
 
-st.write(
-    "Maximum anomaly score:",
-    results["anomaly_score"].max()
-)
-
-st.write(
-    "Minimum anomaly score:",
-    results["anomaly_score"].min()
-)
-
-st.write(
-    "Predictions:",
-    results["prediction"].value_counts().to_dict()
-)
-
-if "injected_anomaly" in results.columns:
     st.write(
-        "Injected anomalies remaining:",
-        int(results["injected_anomaly"].sum())
+        "Maximum anomaly score:",
+        results["anomaly_score"].max()
     )
 
     st.write(
-        "Injected anomalies detected:",
-        int(
-            (
-                (results["injected_anomaly"] == 1)
-                & (results["prediction"] == 1)
-            ).sum()
+        "Minimum anomaly score:",
+        results["anomaly_score"].min()
+    )
+
+    st.write(
+        "Predictions:",
+        results["prediction"].value_counts().to_dict()
+    )
+    
+    if "injected_anomaly" in results.columns:
+        st.write(
+            "Injected anomalies remaining:",
+            int(results["injected_anomaly"].sum())
         )
-    )
-
-    st.write(
-        "Injected anomalies missed:",
-        int(
-            (
-                (results["injected_anomaly"] == 1)
-                & (results["prediction"] == 0)
-            ).sum()
+    
+        st.write(
+            "Injected anomalies detected:",
+            int(
+                (
+                    (results["injected_anomaly"] == 1)
+                    & (results["prediction"] == 1)
+                ).sum()
+            )
         )
-    )
+    
+        st.write(
+            "Injected anomalies missed:",
+            int(
+                (
+                    (results["injected_anomaly"] == 1)
+                    & (results["prediction"] == 0)
+                ).sum()
+            )
+        )
 except Exception as e:
     st.error(f"Prediction failed: {e}")
     st.stop()
