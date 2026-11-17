@@ -106,11 +106,6 @@ def detect_anomalies(data):
 
 st.sidebar.title("💧 Reservoir Monitoring")
 
-selected_model = st.sidebar.selectbox(
-    "Select anomaly detection model",
-    ["Isolation Forest", "Optimized Autoencoder"]
-)
-
 page = st.sidebar.radio(
     "Navigation",
     [
