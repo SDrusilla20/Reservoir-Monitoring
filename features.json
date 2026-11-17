@@ -1,0 +1,19 @@
+[
+    "level_ft",
+    "inflow_cusecs",
+    "outflow_cusecs",
+    "storage_mcft",
+    "level_ft_change",
+    "inflow_cusecs_change",
+    "outflow_cusecs_change",
+    "storage_mcft_change",
+    "net_flow",
+    "level_ft_rolling_mean_14d",
+    "level_ft_rolling_std_14d",
+    "inflow_cusecs_rolling_mean_14d",
+    "inflow_cusecs_rolling_std_14d",
+    "outflow_cusecs_rolling_mean_14d",
+    "outflow_cusecs_rolling_std_14d",
+    "storage_mcft_rolling_mean_14d",
+    "storage_mcft_rolling_std_14d"
+]
