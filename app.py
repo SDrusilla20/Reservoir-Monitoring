@@ -42,7 +42,7 @@ def load_artifacts():
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(BASE + "reservoir_replaydata.csv")
+    df = pd.read_csv(BASE + "reservoir_replay_data.csv")
     df["date"] = pd.to_datetime(df["date"])
     return df.sort_values("date").reset_index(drop=True)
 
