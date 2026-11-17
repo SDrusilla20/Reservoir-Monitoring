@@ -169,6 +169,35 @@ try:
                 ).sum()
             )
         )
+        st.write("### Score Comparison")
+
+    if "injected_anomaly" in results.columns:
+    
+        st.write(
+            "Average score of injected anomalies:",
+            results.loc[
+                results["injected_anomaly"] == 1,
+                "anomaly_score"
+            ].mean()
+        )
+    
+        st.write(
+            "Average score of normal observations:",
+            results.loc[
+                results["injected_anomaly"] == 0,
+                "anomaly_score"
+            ].mean()
+        )
+    
+        st.write("Top 10 anomaly scores:")
+    
+        st.dataframe(
+            results.nlargest(10, "anomaly_score")[
+                ["date", "inflow_cusecs",
+                 "anomaly_score", "injected_anomaly",
+                 "prediction"]
+            ]
+        )
 except Exception as e:
     st.error(f"Prediction failed: {e}")
     st.stop()
