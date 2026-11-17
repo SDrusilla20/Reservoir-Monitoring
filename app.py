@@ -341,4 +341,4 @@ elif page == "Live Simulation":
         st.info("Press Start / Next Reading to begin replay.")
 
 st.sidebar.divider()
-st.sidebar.caption("AI Reservoir Monitoring | Academic Project")
+st.sidebar.caption("AI Reservoir Monitoring")
