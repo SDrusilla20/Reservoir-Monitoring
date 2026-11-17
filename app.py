@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-BASE = "reservoir_dashboard/"
+BASE = ""
 
 PRIMARY = [
     "level_ft",
