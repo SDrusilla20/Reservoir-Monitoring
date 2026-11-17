@@ -29,9 +29,6 @@ PRIMARY = [
 @st.cache_resource
 def load_artifacts():
     isolation_forest = joblib.load(BASE + "isolation_forest.pkl")
-    autoencoder = tf.keras.models.load_model(
-        BASE + "optimized_autoencoder.keras"
-    )
     scaler = joblib.load(BASE + "scaler.pkl")
 
     with open(BASE + "thresholds.json") as f:
@@ -40,18 +37,18 @@ def load_artifacts():
     with open(BASE + "features.json") as f:
         features = json.load(f)
 
-    return isolation_forest, autoencoder, scaler, thresholds, features
+    return isolation_forest, scaler, thresholds, features
 
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(BASE + "reservoir_data.csv")
+    df = pd.read_csv(BASE + "reservoir_replaydata.csv")
     df["date"] = pd.to_datetime(df["date"])
     return df.sort_values("date").reset_index(drop=True)
 
 
 try:
-    isolation_forest, autoencoder, scaler, thresholds, features = load_artifacts()
+    isolation_forest, scaler, thresholds, features = load_artifacts()
     df = load_data()
 except Exception as e:
     st.error(f"Could not load project files: {e}")
@@ -90,21 +87,14 @@ def create_features(data):
 
 # ---------------- MODEL PREDICTION ----------------
 
-def detect_anomalies(data, selected_model):
+def detect_anomalies(data):
     data = data.copy()
-
     data = data.dropna(subset=features).copy()
 
     X = scaler.transform(data[features])
 
-    if selected_model == "Isolation Forest":
-        scores = -isolation_forest.decision_function(X)
-        threshold = thresholds["isolation_forest"]
-
-    else:
-        reconstructed = autoencoder.predict(X, verbose=0)
-        scores = np.mean(np.square(X - reconstructed), axis=1)
-        threshold = thresholds["autoencoder"]
+    scores = -isolation_forest.decision_function(X)
+    threshold = thresholds["isolation_forest"]
 
     data["anomaly_score"] = scores
     data["prediction"] = (scores >= threshold).astype(int)
@@ -137,10 +127,7 @@ page = st.sidebar.radio(
 featured_data = create_features(df)
 
 try:
-    results, threshold = detect_anomalies(
-        featured_data,
-        selected_model
-    )
+    results, threshold = detect_anomalies(featured_data)
 except Exception as e:
     st.error(f"Prediction failed: {e}")
     st.stop()
@@ -276,69 +263,85 @@ elif page == "Model Comparison":
 
 elif page == "Live Simulation":
 
-    st.subheader("Historical Data Replay Simulation")
+    st.subheader("Automatic Reservoir Reading Replay")
 
     st.info(
-        "This mode replays historical daily observations one at a time. "
-        "It is a software simulation, not a live ESP32 sensor connection."
+        "Historical daily observations and injected synthetic "
+        "contextual anomalies are replayed automatically. "
+        "This is a software simulation, not a live ESP32 connection."
     )
 
     speed = st.slider(
-        "Replay interval (seconds)",
+        "Time between readings (seconds)",
         min_value=1,
         max_value=5,
-        value=1
+        value=2
     )
 
     if "replay_index" not in st.session_state:
         st.session_state.replay_index = 0
 
+    if "replay_running" not in st.session_state:
+        st.session_state.replay_running = False
+
     total = len(results)
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
-    if col1.button("Start / Next Reading"):
-        st.session_state.replay_index = min(
-            st.session_state.replay_index + 1,
-            total
-        )
+    if col1.button("Start Replay"):
+        st.session_state.replay_running = True
 
-    if col2.button("Reset Replay"):
+    if col2.button("Stop Replay"):
+        st.session_state.replay_running = False
+
+    if col3.button("Reset Replay"):
+        st.session_state.replay_running = False
         st.session_state.replay_index = 0
 
-    if st.session_state.replay_index > 0:
+    @st.fragment(
+        run_every=speed if st.session_state.replay_running else None
+    )
+    def automatic_replay():
 
-        current = results.iloc[
-            st.session_state.replay_index - 1
-        ]
+        if st.session_state.replay_index < total:
 
-        st.markdown(f"### Reading Date: {current.date}")
+            current = results.iloc[
+                st.session_state.replay_index
+            ]
 
-        c1, c2, c3, c4 = st.columns(4)
+            st.markdown(f"### Reading Date: {current['date']}")
 
-        c1.metric("Water Level", f"{current.level_ft:.2f} ft")
-        c2.metric("Inflow", f"{current.inflow_cusecs:.2f}")
-        c3.metric("Outflow", f"{current.outflow_cusecs:.2f}")
-        c4.metric("Storage", f"{current.storage_mcft:.2f}")
+            c1, c2, c3, c4 = st.columns(4)
 
-        if current.prediction == 1:
-            st.error(
-                f"Potential anomaly detected! "
-                f"Score: {current.anomaly_score:.5f}"
+            c1.metric("Water Level", f"{current['level_ft']:.2f} ft")
+            c2.metric("Inflow", f"{current['inflow_cusecs']:.2f} cusecs")
+            c3.metric("Outflow", f"{current['outflow_cusecs']:.2f} cusecs")
+            c4.metric("Storage", f"{current['storage_mcft']:.2f} MCFT")
+
+            if current["prediction"] == 1:
+                st.error(
+                    f"ANOMALY DETECTED | "
+                    f"Score: {current['anomaly_score']:.5f}"
+                )
+            else:
+                st.success("Reading classified as normal.")
+
+            st.progress(
+                (st.session_state.replay_index + 1) / total
             )
+
+            st.caption(
+                f"Reading {st.session_state.replay_index + 1} of {total}"
+            )
+
+            st.session_state.replay_index += 1
+
         else:
-            st.success("Reading classified as normal.")
+            st.session_state.replay_running = False
+            st.success("Replay completed.")
+            st.rerun()
 
-        st.progress(
-            st.session_state.replay_index / total
-        )
-
-        st.caption(
-            f"Reading {st.session_state.replay_index} of {total}"
-        )
-
-    else:
-        st.info("Press Start / Next Reading to begin replay.")
+    automatic_replay()
 
 st.sidebar.divider()
 st.sidebar.caption("AI Reservoir Monitoring")
