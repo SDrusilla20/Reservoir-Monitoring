@@ -198,6 +198,35 @@ try:
                  "prediction"]
             ]
         )
+    st.write("### Injected vs Normal Score Distribution")
+
+    st.write("Injected anomaly score statistics:")
+    
+    st.write(
+        results.loc[
+            results["injected_anomaly"] == 1,
+            "anomaly_score"
+        ].describe()
+    )
+    
+    st.write("Normal score statistics:")
+    
+    st.write(
+        results.loc[
+            results["injected_anomaly"] == 0,
+            "anomaly_score"
+        ].describe()
+    )
+    
+    st.write("### Highest-scoring injected anomalies")
+    
+    st.dataframe(
+        results[results["injected_anomaly"] == 1]
+        .sort_values("anomaly_score", ascending=False)
+        [["date", "inflow_cusecs",
+          "anomaly_score", "prediction"]]
+        .head(10)
+    )
 except Exception as e:
     st.error(f"Prediction failed: {e}")
     st.stop()
